@@ -105,6 +105,14 @@ abbreviation). Every country's postal rules are different enough that
 adding one means actually reading that country's postal authority docs,
 not guessing from a regex.
 
+## Development
+
+Tests use only the standard library:
+
+```
+$ python -m unittest discover
+```
+
 ## License
 
 MIT, see LICENSE.
