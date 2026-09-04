@@ -100,10 +100,12 @@ $ addrlint addresses.txt
 
 ## Status
 
-Only US address validation exists right now (ZIP shape, state
-abbreviation). Every country's postal rules are different enough that
-adding one means actually reading that country's postal authority docs,
-not guessing from a regex.
+US, Canadian (`country: CA`), and UK (`country: GB` or `UK`) addresses get
+format-specific checks: postal code shape for all three, plus state or
+province code for US and CA. Any other `country` value only gets the
+required-field check — every country's postal rules are different enough
+that adding one means actually reading that country's postal authority
+docs, not guessing from a regex.
 
 ## Development
 

@@ -86,15 +86,85 @@ class TestUSRegion(unittest.TestCase):
                 self.assertIn(region, diags[0].message)
 
 
-class TestNonUSCountry(unittest.TestCase):
-    def test_non_us_country_skips_postal_and_region_checks(self):
-        text = (
+class TestCAPostalCode(unittest.TestCase):
+    def valid_ca_block(self, postal_code="K1A 0B1", region="ON"):
+        return block_from(
             "name: Jane Doe\n"
             "street: 123 Fake St\n"
-            "city: Toronto\n"
-            "region: ON\n"
-            "postal_code: K1A 0B9\n"
+            "city: Ottawa\n"
+            f"region: {region}\n"
+            f"postal_code: {postal_code}\n"
             "country: CA"
+        )
+
+    def test_valid_postal_code(self):
+        self.assertEqual(validate_block(self.valid_ca_block(), "f.txt"), [])
+
+    def test_valid_postal_code_without_space_is_case_insensitive(self):
+        block = self.valid_ca_block(postal_code="k1a0b1")
+        self.assertEqual(validate_block(block, "f.txt"), [])
+
+    def test_invalid_postal_code_variants(self):
+        invalid = ["K1A0B", "K1A 0B12", "12A 3B4", "DAA 1A1", "K1A  0B1"]
+        for postal_code in invalid:
+            with self.subTest(postal_code=postal_code):
+                block = self.valid_ca_block(postal_code=postal_code)
+                diags = validate_block(block, "f.txt")
+                self.assertEqual(len(diags), 1)
+                self.assertIn(postal_code, diags[0].message)
+
+    def test_invalid_province_code(self):
+        block = self.valid_ca_block(region="XX")
+        diags = validate_block(block, "f.txt")
+        self.assertEqual(len(diags), 1)
+        self.assertIn("XX", diags[0].message)
+
+
+class TestGBPostalCode(unittest.TestCase):
+    def valid_gb_block(self, postal_code="SW1A 1AA", country="GB"):
+        return block_from(
+            "name: Jane Doe\n"
+            "street: 10 Downing St\n"
+            "city: London\n"
+            "region: London\n"
+            f"postal_code: {postal_code}\n"
+            f"country: {country}"
+        )
+
+    def test_valid_postal_code(self):
+        self.assertEqual(validate_block(self.valid_gb_block(), "f.txt"), [])
+
+    def test_uk_is_accepted_as_alias_for_gb(self):
+        block = self.valid_gb_block(country="uk")
+        self.assertEqual(validate_block(block, "f.txt"), [])
+
+    def test_valid_short_postal_code(self):
+        block = self.valid_gb_block(postal_code="EC1A 1BB")
+        self.assertEqual(validate_block(block, "f.txt"), [])
+
+    def test_girobank_postal_code(self):
+        block = self.valid_gb_block(postal_code="GIR 0AA")
+        self.assertEqual(validate_block(block, "f.txt"), [])
+
+    def test_invalid_postal_code_variants(self):
+        invalid = ["SW1A", "1AA SW1", "SW1A 1A", "12345"]
+        for postal_code in invalid:
+            with self.subTest(postal_code=postal_code):
+                block = self.valid_gb_block(postal_code=postal_code)
+                diags = validate_block(block, "f.txt")
+                self.assertEqual(len(diags), 1)
+                self.assertIn(postal_code, diags[0].message)
+
+
+class TestOtherCountry(unittest.TestCase):
+    def test_unhandled_country_skips_postal_and_region_checks(self):
+        text = (
+            "name: Jane Doe\n"
+            "street: 12 Rue de Paris\n"
+            "city: Paris\n"
+            "region: IDF\n"
+            "postal_code: 75001\n"
+            "country: FR"
         )
         block = block_from(text)
         self.assertEqual(validate_block(block, "f.txt"), [])
