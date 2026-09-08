@@ -82,6 +82,16 @@ class Diagnostic:
 
         return "\n".join(lines)
 
+    def to_dict(self) -> dict:
+        return {
+            "severity": self.severity,
+            "message": self.message,
+            "line": self.line,
+            "col": self.col,
+            "length": self.length,
+            "help": self.help,
+        }
+
 
 def parse(text: str) -> List[AddressBlock]:
     """Parse address file contents into a list of AddressBlock.

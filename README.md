@@ -83,6 +83,40 @@ $ addrlint addresses.txt
 addrlint: addresses.txt: 2 address block(s), no errors
 ```
 
+Pass `--format json` to get diagnostics as a single JSON object on stdout
+instead, for feeding into other tools:
+
+```
+$ addrlint addresses.txt --format json
+{
+  "file": "addresses.txt",
+  "blocks": 2,
+  "diagnostics": [
+    {
+      "severity": "error",
+      "message": "\"XX\" is not a recognized US state or territory code",
+      "line": 11,
+      "col": 9,
+      "length": 2,
+      "help": "use a two-letter code, e.g. \"IL\" for Illinois"
+    },
+    {
+      "severity": "error",
+      "message": "invalid US postal code \"6060\"",
+      "line": 12,
+      "col": 14,
+      "length": 4,
+      "help": "expected 5 digits, optionally followed by \"-\" and 4 digits, e.g. \"62704\" or \"62704-1234\""
+    }
+  ],
+  "ok": false
+}
+```
+
+`ok` is `true` only when the file parsed, contained at least one address
+block, and produced no diagnostics — the same condition that makes the
+process exit with status 0 in text mode.
+
 ## Installing
 
 No dependencies beyond the Python standard library. Run it directly:
