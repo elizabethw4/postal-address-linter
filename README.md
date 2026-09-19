@@ -83,39 +83,60 @@ $ addrlint addresses.txt
 addrlint: addresses.txt: 2 address block(s), no errors
 ```
 
+You can pass more than one file in a single invocation. Each file is
+checked independently, and problems in one file don't stop the others
+from being checked:
+
+```
+$ addrlint addresses.txt other.txt
+```
+
+In text mode, results for each file are printed one after another. In
+JSON mode, exit status is 2 if any file couldn't be read, 1 if any file
+parsed but had diagnostics, and 0 only if every file was clean.
+
 Pass `--format json` to get diagnostics as a single JSON object on stdout
 instead, for feeding into other tools:
 
 ```
 $ addrlint addresses.txt --format json
 {
-  "file": "addresses.txt",
-  "blocks": 2,
-  "diagnostics": [
+  "ok": false,
+  "files": [
     {
-      "severity": "error",
-      "message": "\"XX\" is not a recognized US state or territory code",
-      "line": 11,
-      "col": 9,
-      "length": 2,
-      "help": "use a two-letter code, e.g. \"IL\" for Illinois"
-    },
-    {
-      "severity": "error",
-      "message": "invalid US postal code \"6060\"",
-      "line": 12,
-      "col": 14,
-      "length": 4,
-      "help": "expected 5 digits, optionally followed by \"-\" and 4 digits, e.g. \"62704\" or \"62704-1234\""
+      "file": "addresses.txt",
+      "error": null,
+      "blocks": 2,
+      "diagnostics": [
+        {
+          "severity": "error",
+          "message": "\"XX\" is not a recognized US state or territory code",
+          "line": 11,
+          "col": 9,
+          "length": 2,
+          "help": "use a two-letter code, e.g. \"IL\" for Illinois"
+        },
+        {
+          "severity": "error",
+          "message": "invalid US postal code \"6060\"",
+          "line": 12,
+          "col": 14,
+          "length": 4,
+          "help": "expected 5 digits, optionally followed by \"-\" and 4 digits, e.g. \"62704\" or \"62704-1234\""
+        }
+      ],
+      "ok": false
     }
-  ],
-  "ok": false
+  ]
 }
 ```
 
-`ok` is `true` only when the file parsed, contained at least one address
-block, and produced no diagnostics — the same condition that makes the
-process exit with status 0 in text mode.
+Each entry in `files` has its own `ok`, which is `true` only when that
+file parsed, contained at least one address block, and produced no
+diagnostics. `error` is set instead of `blocks`/`diagnostics` doing
+anything useful when the file couldn't be read at all. The top-level
+`ok` is `true` only when every file's `ok` is `true` — the same
+condition that makes the process exit with status 0.
 
 ## Installing
 
