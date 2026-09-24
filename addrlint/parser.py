@@ -61,6 +61,9 @@ class Diagnostic:
     col: int
     length: int = 1
     help: Optional[str] = None
+    # Replacement text for the span (line, col, length) above. Set only for
+    # diagnostics --fix knows how to correct unambiguously; None otherwise.
+    fix: Optional[str] = None
 
     def render(self, source_lines: List[str]) -> str:
         gutter_width = len(str(self.line))
@@ -90,6 +93,7 @@ class Diagnostic:
             "col": self.col,
             "length": self.length,
             "help": self.help,
+            "fix": self.fix,
         }
 
 

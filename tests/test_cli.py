@@ -115,6 +115,54 @@ class TestJsonFormat(unittest.TestCase):
         self.assertTrue(payload["files"][1]["ok"])
 
 
+class TestFixMode(unittest.TestCase):
+    def test_fix_corrects_miscased_field_name_in_place(self):
+        text = VALID_US_BLOCK.replace("region: IL", "Region: IL")
+        with TempAddressFile(text) as path:
+            code, out, err = run_main([path, "--fix"])
+            with open(path, encoding="utf-8") as f:
+                fixed_text = f.read()
+
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertIn("fixed 1 issue", out)
+        self.assertIn("no errors", out)
+        self.assertIn("region: IL", fixed_text)
+        self.assertNotIn("Region:", fixed_text)
+
+    def test_fix_reports_remaining_diagnostics_after_fixing(self):
+        text = VALID_US_BLOCK.replace("region: IL", "Region: XX")
+        with TempAddressFile(text) as path:
+            code, out, err = run_main([path, "--fix"])
+            with open(path, encoding="utf-8") as f:
+                fixed_text = f.read()
+
+        self.assertEqual(code, 1)
+        self.assertIn("fixed 1 issue", out)
+        self.assertIn("not a recognized US state", err)
+        self.assertIn("region: XX", fixed_text)
+
+    def test_fix_leaves_file_unchanged_when_nothing_is_fixable(self):
+        text = VALID_US_BLOCK.replace("region: IL", "region: XX")
+        with TempAddressFile(text) as path:
+            code, out, err = run_main([path, "--fix"])
+            with open(path, encoding="utf-8") as f:
+                unchanged_text = f.read()
+
+        self.assertEqual(code, 1)
+        self.assertNotIn("fixed", out)
+        self.assertEqual(unchanged_text, text)
+
+    def test_fix_json_reports_fixed_count(self):
+        text = VALID_US_BLOCK.replace("region: IL", "Region: IL")
+        with TempAddressFile(text) as path:
+            code, out, err = run_main([path, "--fix", "--format", "json"])
+        payload = json.loads(out)
+        self.assertEqual(code, 0)
+        self.assertEqual(payload["files"][0]["fixed"], 1)
+        self.assertEqual(payload["files"][0]["diagnostics"], [])
+
+
 class TestTextFormat(unittest.TestCase):
     def test_is_the_default(self):
         with TempAddressFile(VALID_US_BLOCK) as path:

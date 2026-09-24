@@ -46,8 +46,25 @@ GB_POSTAL_RE = re.compile(
 def validate_block(block: AddressBlock, filename: str) -> List[Diagnostic]:
     diagnostics = []
 
+    fields_by_lower_key = {f.key.lower(): f for f in block.fields}
+
     for name in REQUIRED_FIELDS:
-        if not block.has(name):
+        if block.has(name):
+            continue
+
+        miscased = fields_by_lower_key.get(name)
+        if miscased is not None:
+            diagnostics.append(Diagnostic(
+                severity="error",
+                message=f'field name "{miscased.key}" should be "{name}" (field names are case-sensitive)',
+                filename=filename,
+                line=miscased.line,
+                col=miscased.key_col,
+                length=len(miscased.key),
+                help=f'change "{miscased.key}" to "{name}"',
+                fix=name,
+            ))
+        else:
             diagnostics.append(Diagnostic(
                 severity="error",
                 message=f'address is missing required field "{name}"',

@@ -95,6 +95,20 @@ In text mode, results for each file are printed one after another. In
 JSON mode, exit status is 2 if any file couldn't be read, 1 if any file
 parsed but had diagnostics, and 0 only if every file was clean.
 
+Some errors are trivially correctable — right now that means a field name
+typed with the wrong case, like `Region:` instead of `region:`. Pass `--fix`
+to rewrite the file in place and then report whatever's left:
+
+```
+$ addrlint addresses.txt --fix
+addrlint: fixed 1 issue in addresses.txt
+addrlint: addresses.txt: 2 address block(s), no errors
+```
+
+Diagnostics that `--fix` knows how to correct carry a `fix` value in JSON
+output (the replacement text for the span at `line`/`col`/`length`);
+everything else has `"fix": null`.
+
 Pass `--format json` to get diagnostics as a single JSON object on stdout
 instead, for feeding into other tools:
 
@@ -114,7 +128,8 @@ $ addrlint addresses.txt --format json
           "line": 11,
           "col": 9,
           "length": 2,
-          "help": "use a two-letter code, e.g. \"IL\" for Illinois"
+          "help": "use a two-letter code, e.g. \"IL\" for Illinois",
+          "fix": null
         },
         {
           "severity": "error",
@@ -122,10 +137,12 @@ $ addrlint addresses.txt --format json
           "line": 12,
           "col": 14,
           "length": 4,
-          "help": "expected 5 digits, optionally followed by \"-\" and 4 digits, e.g. \"62704\" or \"62704-1234\""
+          "help": "expected 5 digits, optionally followed by \"-\" and 4 digits, e.g. \"62704\" or \"62704-1234\"",
+          "fix": null
         }
       ],
-      "ok": false
+      "ok": false,
+      "fixed": 0
     }
   ]
 }
@@ -136,7 +153,9 @@ file parsed, contained at least one address block, and produced no
 diagnostics. `error` is set instead of `blocks`/`diagnostics` doing
 anything useful when the file couldn't be read at all. The top-level
 `ok` is `true` only when every file's `ok` is `true` — the same
-condition that makes the process exit with status 0.
+condition that makes the process exit with status 0. `fixed` counts how
+many diagnostics `--fix` corrected on that file; it's always `0` without
+`--fix`.
 
 ## Installing
 

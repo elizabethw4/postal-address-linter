@@ -40,6 +40,25 @@ class TestRequiredFields(unittest.TestCase):
         diags = validate_block(block, "f.txt")
         self.assertEqual(diags, [])
 
+    def test_miscased_field_name_is_reported_as_fixable_instead_of_missing(self):
+        text = VALID_US_BLOCK.replace("region: IL", "Region: IL")
+        block = block_from(text)
+        diags = validate_block(block, "f.txt")
+        self.assertEqual(len(diags), 1)
+        diag = diags[0]
+        self.assertIn('"Region"', diag.message)
+        self.assertIn('"region"', diag.message)
+        self.assertEqual(diag.fix, "region")
+        region_field = block.get("Region")
+        self.assertEqual(diag.line, region_field.line)
+        self.assertEqual(diag.col, region_field.key_col)
+        self.assertEqual(diag.length, len("Region"))
+
+    def test_missing_field_diagnostic_has_no_fix(self):
+        block = block_from("name: Jane\nstreet: Main St")
+        diags = validate_block(block, "f.txt")
+        self.assertTrue(all(d.fix is None for d in diags))
+
 
 class TestUSPostalCode(unittest.TestCase):
     def test_valid_five_digit(self):

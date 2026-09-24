@@ -17,6 +17,8 @@ class FileResult:
         self.block_count = 0
         self.parse_failed = False
         self.source_lines: List[str] = []
+        self.text = ""
+        self.fixed_count = 0
 
     @property
     def no_blocks_found(self) -> bool:
@@ -33,6 +35,7 @@ class FileResult:
             "blocks": self.block_count,
             "diagnostics": [d.to_dict() for d in self.diagnostics],
             "ok": self.ok,
+            "fixed": self.fixed_count,
         }
 
 
@@ -46,6 +49,7 @@ def _lint_file(filename: str) -> FileResult:
         result.read_error = e.strerror or str(e)
         return result
 
+    result.text = text
     result.source_lines = text.splitlines()
 
     try:
@@ -68,7 +72,42 @@ def _lint_file(filename: str) -> FileResult:
     return result
 
 
+def _apply_fixes(filename: str, text: str, diagnostics: List[Diagnostic]) -> int:
+    """Rewrite `filename` with every fixable diagnostic applied in place.
+
+    Each fixable diagnostic replaces the exact span it points at (line, col,
+    length) with its `fix` text. Diagnostics are applied right-to-left within
+    a line so earlier replacements don't shift the columns of later ones.
+    Returns the number of fixes applied.
+    """
+    fixable = [d for d in diagnostics if d.fix is not None]
+    if not fixable:
+        return 0
+
+    lines = text.splitlines(keepends=True)
+    by_line: dict = {}
+    for d in fixable:
+        by_line.setdefault(d.line, []).append(d)
+
+    for lineno, diags in by_line.items():
+        line = lines[lineno - 1]
+        for d in sorted(diags, key=lambda d: d.col, reverse=True):
+            start = d.col - 1
+            end = start + d.length
+            line = line[:start] + d.fix + line[end:]
+        lines[lineno - 1] = line
+
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write("".join(lines))
+
+    return len(fixable)
+
+
 def _print_text_result(result: FileResult) -> None:
+    if result.fixed_count:
+        plural = "" if result.fixed_count == 1 else "s"
+        print(f"addrlint: fixed {result.fixed_count} issue{plural} in {result.filename}")
+
     if result.read_error:
         print(f"addrlint: cannot read {result.filename}: {result.read_error}", file=sys.stderr)
     elif result.parse_failed:
@@ -95,9 +134,24 @@ def main(argv: Optional[List[str]] = None) -> int:
         default="text",
         help="output format for diagnostics (default: text)",
     )
+    arg_parser.add_argument(
+        "--fix",
+        action="store_true",
+        help="rewrite files in place to correct trivially fixable errors "
+             "(currently: field names with the wrong case), then report "
+             "whatever diagnostics remain",
+    )
     args = arg_parser.parse_args(argv)
 
-    results = [_lint_file(filename) for filename in args.files]
+    results = []
+    for filename in args.files:
+        result = _lint_file(filename)
+        if args.fix and not result.read_error and not result.parse_failed:
+            fixed_count = _apply_fixes(filename, result.text, result.diagnostics)
+            if fixed_count:
+                result = _lint_file(filename)
+                result.fixed_count = fixed_count
+        results.append(result)
 
     if args.format == "json":
         payload = {
