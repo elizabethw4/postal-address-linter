@@ -96,8 +96,10 @@ JSON mode, exit status is 2 if any file couldn't be read, 1 if any file
 parsed but had diagnostics, and 0 only if every file was clean.
 
 Some errors are trivially correctable — right now that means a field name
-typed with the wrong case, like `Region:` instead of `region:`. Pass `--fix`
-to rewrite the file in place and then report whatever's left:
+typed with the wrong case, like `Region:` instead of `region:`, or a
+Canadian postal code with the wrong case or a doubled space, like
+`k1a  0b1` instead of `K1A 0B1`. Pass `--fix` to rewrite the file in place
+and then report whatever's left:
 
 ```
 $ addrlint addresses.txt --fix

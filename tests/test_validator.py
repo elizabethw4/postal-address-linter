@@ -138,6 +138,28 @@ class TestCAPostalCode(unittest.TestCase):
         self.assertEqual(len(diags), 1)
         self.assertIn("XX", diags[0].message)
 
+    def test_doubled_space_is_reported_as_fixable(self):
+        block = self.valid_ca_block(postal_code="K1A  0B1")
+        diags = validate_block(block, "f.txt")
+        self.assertEqual(len(diags), 1)
+        self.assertEqual(diags[0].fix, "K1A 0B1")
+
+    def test_lowercase_with_doubled_space_is_reported_as_fixable(self):
+        block = self.valid_ca_block(postal_code="k1a  0b1")
+        diags = validate_block(block, "f.txt")
+        self.assertEqual(len(diags), 1)
+        self.assertEqual(diags[0].fix, "K1A 0B1")
+
+    def test_no_space_is_already_valid_not_a_fix_case(self):
+        block = self.valid_ca_block(postal_code="k1a0b1")
+        self.assertEqual(validate_block(block, "f.txt"), [])
+
+    def test_wrong_length_is_not_reported_as_fixable(self):
+        block = self.valid_ca_block(postal_code="K1A0B")
+        diags = validate_block(block, "f.txt")
+        self.assertEqual(len(diags), 1)
+        self.assertIsNone(diags[0].fix)
+
 
 class TestGBPostalCode(unittest.TestCase):
     def valid_gb_block(self, postal_code="SW1A 1AA", country="GB"):

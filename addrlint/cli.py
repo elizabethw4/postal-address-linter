@@ -138,7 +138,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         "--fix",
         action="store_true",
         help="rewrite files in place to correct trivially fixable errors "
-             "(currently: field names with the wrong case), then report "
+             "(currently: field names with the wrong case, and Canadian "
+             "postal codes with the wrong case or spacing), then report "
              "whatever diagnostics remain",
     )
     args = arg_parser.parse_args(argv)

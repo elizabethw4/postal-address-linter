@@ -153,6 +153,24 @@ class TestFixMode(unittest.TestCase):
         self.assertNotIn("fixed", out)
         self.assertEqual(unchanged_text, text)
 
+    def test_fix_corrects_ca_postal_code_spacing_in_place(self):
+        text = (
+            "name: Jane Doe\n"
+            "street: 123 Fake St\n"
+            "city: Ottawa\n"
+            "region: ON\n"
+            "postal_code: k1a  0b1\n"
+            "country: CA\n"
+        )
+        with TempAddressFile(text) as path:
+            code, out, err = run_main([path, "--fix"])
+            with open(path, encoding="utf-8") as f:
+                fixed_text = f.read()
+
+        self.assertEqual(code, 0)
+        self.assertIn("fixed 1 issue", out)
+        self.assertIn("postal_code: K1A 0B1", fixed_text)
+
     def test_fix_json_reports_fixed_count(self):
         text = VALID_US_BLOCK.replace("region: IL", "Region: IL")
         with TempAddressFile(text) as path:

@@ -8,7 +8,7 @@ guess at without real rules per country.
 """
 
 import re
-from typing import List
+from typing import List, Optional
 
 from .parser import AddressBlock, Diagnostic
 
@@ -34,6 +34,21 @@ CA_POSTAL_RE = re.compile(
 CA_PROVINCE_CODES = {
     "AB", "BC", "MB", "NB", "NL", "NS", "NT", "NU", "ON", "PE", "QC", "SK", "YT",
 }
+
+
+def _normalize_ca_postal(value: str) -> Optional[str]:
+    """Return the canonical "A1A 1A1" form of `value` if it's a CA postal
+    code with the wrong case or spacing, or None if it isn't salvageable.
+
+    A single space in the middle is already accepted by CA_POSTAL_RE, so
+    this only fires for things like doubled spaces or missing spaces
+    combined with lowercase letters - typos, not ambiguous input.
+    """
+    compact = value.upper().replace(" ", "")
+    if len(compact) != 6:
+        return None
+    candidate = f"{compact[:3]} {compact[3:]}"
+    return candidate if CA_POSTAL_RE.match(candidate) else None
 
 # Simplified version of the pattern gov.uk publishes for validating UK
 # postcodes, including the one-off "GIR 0AA" (Girobank) postcode.
@@ -132,6 +147,7 @@ def _validate_ca(block: AddressBlock, filename: str) -> List[Diagnostic]:
             col=postal.value_col,
             length=len(postal.value),
             help='expected the form "A1A 1A1", e.g. "K1A 0B1"',
+            fix=_normalize_ca_postal(postal.value),
         ))
 
     region = block.get("region")
